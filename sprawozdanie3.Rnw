@@ -1,0 +1,415 @@
+\documentclass[a4paper,12pt]{article}
+
+\author{Nela Tomaszewicz}
+\title{PSP -- Raport 3}
+\date{Maj 2020}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{natbib}
+\bibliographystyle{apalike}
+\usepackage{mathtools}
+\usepackage{Sweave}[noae]
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{float}
+
+\begin{document}
+\maketitle
+
+\section{Zadanie 1}
+W zadaniu konstruujemy histogram rozkładu dwumianowego dla podanych zestawów parametrów, a następnie dorysowujemy wykres gęstości dla rozkładu normalnego z odpowiednio wyliczonymi wartościami $\mu$ i $\sigma$. Parametryzacja rozkładu dwumianowego $B(n, p)$ do rozkładu normalnego jest następująca:
+\[\mu = np, \] \[\sigma = \sqrt{np(1-p)},\] gdzie $n$ oznacza liczbę prób, a $p$ to prawdopodobieństwo sukcesu. Obserwacje generujemy funkcją \texttt{rbinom}, która przyjmuje 3 parametry: $p$ i $size$ (podane w zadaniu) oraz $n$ oznaczające liczbę obserwacji do wygenerowania. Przyjmujemy, że dla każdego rozkładu losujemy $n = 100$ obserwacji. Wygenerowane histogramy wyglądają następująco.
+
+<<echo = FALSE, fig=TRUE, message=FALSE, error=FALSE, warning=FALSE, fig.align='center', out.width='75%'>>=
+library(ggplot2)
+library(gridExtra)
+library(scales)
+
+set.seed(1)
+rbin1 <- rbinom(n = 100, p=0.5, 20)
+rbin2 <- rbinom(n = 100, p=0.5, 100)
+rbin3 <- rbinom(n = 100, p=0.1, 20)
+rbin4 <- rbinom(n = 100, p=0.1, 100)
+
+
+df1 <- as.data.frame(rbin1)
+bw <- 1
+
+
+hist1 <- ggplot(data=df1, aes(rbin1)) + 
+  geom_histogram(aes(y = stat(count)/sum(count)),binwidth = bw, col="darkorange", 
+                 fill="coral",
+                 alpha = 0.7) + 
+  labs(title="Histogram rozkładu B(20, 0.5)") +
+  labs(x="x", y="p") +
+  stat_function(fun=dnorm, n = 1000, args = list(mean=10, sd = sqrt(5)), colour = "purple", size = 1.1) +
+  xlim(0, 20) +
+  ylim(0, 0.3)
+
+df2 <- as.data.frame(rbin2)
+bw <- 1
+
+hist2 <- ggplot(data=df2, aes(rbin2)) + 
+  geom_histogram(aes(y = stat(count)/sum(count)),binwidth = bw, col="darkorange", 
+                 fill="coral",
+                 alpha = 0.7) + 
+  labs(title="Histogram rozkładu B(100, 0.5)") +
+  labs(x="x", y="p") +
+  stat_function(fun=dnorm, n = 1000, args = list(mean = 50, sd = sqrt(25)), colour = "purple", size = 1.1) +
+  xlim(0, 100)+
+  ylim(0, 0.3)
+
+df3 <- as.data.frame(rbin3)
+bw <- 1
+
+
+hist3 <- ggplot(data=df3, aes(rbin3)) + 
+  geom_histogram(aes(y = stat(count)/sum(count)),binwidth = bw, col="purple", 
+                 fill="mediumpurple1",
+                 alpha = 0.7) + 
+  labs(title="Histogram rozkładu B(20, 0.1)") +
+  labs(x="x", y="p") +
+  stat_function(fun=dnorm, n = 1000, args = list(mean = 2, sd = sqrt(1.8)), colour = "chocolate1", size = 1.1) +
+  xlim(0, 20)+
+  ylim(0, 0.3)
+
+
+df4 <- as.data.frame(rbin4)
+bw <- 1
+
+hist4 <- ggplot(data=df4, aes(rbin4)) + 
+  geom_histogram(aes(y = stat(count)/sum(count)),binwidth = bw, col="purple", 
+                 fill="mediumpurple1",
+                 alpha = 0.7) + 
+  labs(title="Histogram rozkładu B(100, 0.1)") +
+  labs(x="x", y="p") +
+  stat_function(fun=dnorm, n = 1000, args = list(mean = 10, sd = sqrt(9)), colour = "chocolate1", size = 1.1) +
+  xlim(0, 100)+
+  ylim(0, 0.3)
+
+grid.arrange(hist1, hist2, hist3, hist4, nrow=2)
+@
+Każdy z histogramów ma odpowiednio przeskalowane osie X i Y. Oś X ma wartości od 0 do $n$, natomiast oś Y przyjmuje wartości od 0 do 0.3. Szerokość binów w każdym z histogramów jest równa 1. 
+
+Najbliżej rozkładu normalnego są: pierwszy histogram dla $B(20, 0.5)$ oraz drugi histogram dla $B(100, 0.5)$. Funkcja gęstości jest tutaj najbardziej symetryczna. Jeśli chodzi o skośność, dla obydwu histogramów jest ona dość podobna. Dla pierwszego wynosi około $-0.03$, natomiast dla drugiego $0.04$. Obydwie wartości można przybliżyć do 0. Dwa pozostałe histogramy dla $B(20, 0.1)$ i $B(100, 0.1)$ są mocno prawoskośne, z czego histogram dla 20 obserwacji jest mocniej skośny niż histogram dla 100 obserwacji.
+
+\subsection{Podsumowanie i wnioski}
+Zadanie pokazuje, że nawet gdy liczba prób jest duża, ale prawdopodobieństwo sukcesu nie jest równe 0.5, rozkład nie będzie nawet w przybliżeniu normalny (4. histogram). Najlepsze dopasowanie rozkładu dostajemy dla $p = 0.5$ i w tym przypadku liczba prób nie ma znaczenia. Najdalej od rozkładu normalnego jest histogram dla $n = 20$ i $p = 0.1$. Dodatkowo sprawdziłam, czy skośność dla $n > 100$ i $p = 0.5$ jest mniejsza. Owszem, skośność dla $n = 200$ jest równa około $0.2$, zatem można wyciągnąc wniosek, że rozkład dwumianowy jest tym bliższy normalnemu im wielkość próby $n$ jest większa, a prawdopodobieństwo sukcesu bliższe 0.5.
+
+Warto zaznaczyć, że ogólnie histogram nie jest najlepszą formą do przedstawienia rozkładu dyskretnego, ponieważ wartości są kategoriami i nie powinno ich się zawierać w przedziałach przeznaczonych dla zmiennych ciągłych. 
+
+\section{Zadanie 2}
+Rozważamy standardowy rozkład normalny $N(0,1)$, dla którego wartości oczekiwanej skonstruujemy przedział ufności na poziomie 95\%. Wzór na przedział ufności dla wartości oczekiwanej rozkładu normalnego ($\mu$) przy znanym odchyleniu standardowym to:
+\begin{equation}
+\label{eq:sigmaknown}
+\left[ \bar{X}-z_{1-\frac{\alpha}{2}}\frac{\sigma}{\sqrt{n}},\bar{X}+z_{1-\frac{\alpha}{2}}\frac{\sigma}{\sqrt{n}} \right],
+\end{equation}
+gdzie $n$ to liczba obserwacji, $\bar{X}$ oznacza średnią z obserwacji, $\alpha$ oznacza poziom istotności, $z_{1-\frac{\alpha}{2}}$ to kwantyl rzędu $1 - \frac{\alpha}{2}$ z rozkładu normalnego $N(0, 1)$, natomiast $\sigma$ to odchylenie standardowe populacji.
+
+\subsection{Podpunkt (a)}
+Generujemy 100-elementową próbę z rozkładu $N(0,1)$ i konstruujemy przedział ufności na poziomie 95\% dla wartości oczekiwanej przy pomocy wzoru \eqref{eq:sigmaknown}. Kod oraz wynik są następujące.
+
+<<echo = TRUE, fig=TRUE, message=FALSE, error=FALSE, fig.align='center', out.width='80%'>>=
+set.seed(1)
+# kwantyl z rozkladu normalnego
+z <- qnorm(0.975)
+# licznosc proby
+n <- 100
+# odchylenie std
+sigma <- 1
+
+#generowanie proby
+prob <- rnorm(n, 0, 1)
+#lewe ograniczenie przedzialu
+left <- mean(prob) - z*(sigma/sqrt(n))
+#prawe ograniczenie przedzialu
+right <- mean(prob) + z*(sigma/sqrt(n))
+#przedzial ufnosci
+paste("[",round(left,2), ",",round(right,2), "]")
+@
+Znamy rzeczywistą wartość oczekiwaną, więc możemy stwierdzić, czy zawiera się w wyznaczonym przedziale. W tym przypadku tak.
+
+\subsection{Podpunkt (b)}
+Doświadczenie z podpunktu (a) powtarzamy 1000 razy i wyznaczamy jak często konstruowane przedziały ufności zawierają rzeczywistą wartość oczekiwaną. Z definicji przedziału ufności wynik powinien być zbliżony do wartości poziomu ufności, czyli 95\%. Funkcja służąca do wykonania zadania zostanie przedstawiona poniżej.
+<<echo = TRUE, fig=TRUE, message=FALSE, error=FALSE, fig.align='center', out.width='80%'>>=
+rep_conf_int <- function(n) {
+  sum <- 0
+  sigma <- 1
+  z <- qnorm(0.975)
+  for(i in 1:1000) {
+    prob <- rnorm(n, 0, 1)
+    left <- mean(prob) - z*(sigma/sqrt(n))
+    right <- mean(prob) + z*(sigma/sqrt(n))
+    if(0 >= left & 0 <= right) {
+      sum = sum + 1
+    }
+  }
+  return(paste("Czestosc: ",sum/1000))
+}
+@
+Funkcja przyjmuje interesującą nas liczbę elementów, które chcemy wygenerować w każdym doświadczeniu. Zwraca częstość zawierania rzeczywistej wartości oczekiwanej. Wywołanie dla $n = 100$ zwraca następującą wartość.
+<<echo = TRUE, fig=TRUE, message=FALSE, error=FALSE, fig.align='center', out.width='80%'>>=
+rep_conf_int(100)
+@
+Częstość zawierania przez przedziay ufności rzeczywistej wartości oczekiwanej wynosi w przybliżeniu 95\%, co jest zgodne z początkowym przypuszczeniem.
+
+\subsection{Podpunkt (c)}
+Powtarzamy doświadczenia z punktów (a) i (b) dla próby 200-elementowej. Przedział ufności dla takiej próby to:
+
+<<echo = FALSE, fig=TRUE, message=FALSE, error=FALSE, fig.align='center', out.width='80%'>>=
+# kwantyl z rozkladu normalnego
+z <- qnorm(0.975)
+# licznosc proby
+n <- 200
+# odchylenie std
+sigma <- 1
+
+#generowanie proby
+prob <- rnorm(n, 0, 1)
+#lewe ograniczenie przedzialu
+left <- mean(prob) - z*(sigma/sqrt(n))
+#prawe ograniczenie przedzialu
+right <- mean(prob) + z*(sigma/sqrt(n))
+#przedzial ufnosci
+paste("[",round(left,2), ",",round(right,2), "]")
+@
+Już teraz możemy zauważyć, że jest on trochę węższy niż przedział dla $n = 100$ obserwacji. Szerokość dla $n = 200$ wynosi 0.27, natomiast dla $n = 100$ to 0.39. Prawdopodobieństwo pokrycia rzeczywistej wartości oczekiwanej oraz średnia szerokość przedziałów ufności została wyznaczona poprzez zmodyfikowaną funkcję z podpunktu (b).
+<<echo = TRUE, fig=TRUE, message=FALSE, error=FALSE, fig.align='center', out.width='80%'>>=
+rep_conf_int <- function(n) {
+  sum <- 0
+  sigma <- 1
+  z <- qnorm(0.975)
+  v_width <- c()
+  
+  for(i in 1:1000) {
+    prob <- rnorm(n, 0, 1)
+    left <- mean(prob) - z*(sigma/sqrt(n))
+    right <- mean(prob) + z*(sigma/sqrt(n))
+    if(0 >= left & 0 <= right) {
+      sum = sum + 1
+    }
+    #policzenie szerokosci przedzialu
+    width <- right - left
+    #zapisanie wyliczonych szerokosci
+    v_width <- c(v_width, width)
+  }
+  return(paste("Czestosc: ",sum/1000, ",", "Srednia szerokosc: ",
+               round(mean(v_width), 2)))
+}
+@
+Wywołania dla $n = 100$ i $n = 200$ są następujące:
+<<echo = TRUE, fig=TRUE, message=FALSE, error=FALSE, fig.align='center', out.width='80%'>>=
+rep_conf_int(100)
+rep_conf_int(200)
+@
+Częstość pokrycia (prawdopodobieństwo zawierania) rzeczywistej wartości oczekiwanej w obydwu przypadkach jest zbliżona do 0.95, czyli 95\%. Średnia szerokość przedziału ufności dla większej próby jest mniejsza, co wynika wprost ze wzoru \eqref{eq:sigmaknown}, gdzie wielkość próby $n$ znajduje się w mianowniku. 
+
+\subsection{Podsumowanie i wnioski}
+Im większa próba, tym przedział ufności dla wartości oczekiwanej jest węższy, co sprawia, że jesteśmy "bliżej" rzeczywistej wartości oczekiwanej dla całej populacji nawet gdy posługujemy się tym samym poziomem ufności. Wniosek jest dość logiczny: im większa próba, tym bardziej wiarygodne badania, ponieważ tym lepiej jesteśmy w stanie oszacować rzeczywistą wartość średnią.
+
+\section{Zadanie 3}
+W zadaniu ponownie korzystamy ze zbioru danych \texttt{income.txt} zawierającego dane dotyczące 55~899 pracowników z 3 sektorów zatrudnienia w USA. Dane zawierają także wiek pracowników, ich zarobki, płeć oraz wykształcenie. 
+
+\subsection{Podpunkt (a)}
+Konstruujemy nową zmienną $U$ będącą pierwiastkiem z dochodów (zarobków) pracowników, a następnie rysujemy jej histogram.
+<<echo=FALSE, out.width='75%',message=FALSE, fig.align='center', warning=FALSE>>=
+income <- read.table("income.txt")
+colnames(income) <- c("nr", "wiek", "wykszt", "plec", "zarobki", "sektor")
+
+library(scales)
+library(ggplot2)
+library(dplyr)
+
+income <- income %>%
+  mutate(U = sqrt(zarobki))
+
+income_hist <- ggplot(data=income, aes(U)) + 
+  geom_histogram(aes(y = stat(count)/sum(count)),bins=25, col="darkorange", 
+                 fill="coral",
+                  alpha = 0.7) + 
+  labs(title="Histogram zmiennej U - pierwiastka z zarobków") +
+  labs(x="Zarobki", y="Czestosc")  +
+  scale_x_continuous(labels = dollar)+ 
+  geom_vline(aes(xintercept=mean(income$U, na.rm=T)), color="purple", linetype="dashed", size=1)
+
+income_hist
+@
+Rozkład zmiennej U nie jest normalny, co również było pokazane w Raporcie 2. Średnia wartość U to $\mu_U \approx 179.41$ (pokazana na wykresie przerywaną linią), natomiast średnia wartość dochodów pracowników to $\mu_D = 37864.61$
+
+\subsection{Podpunkt (b)}
+Losujemy 200-elementową próbę ze zbioru danych \texttt{income.txt}. Następnie wyznaczamy estymatory $\mu_U$ i $\mu_D$ będące średnią próbkową dla odpowiednio zmiennej $U$ i $D$. Następnie na podstawie wylosowanej próby skonstruujemy 95\% przedziały ufności i sprawdzimy, czy zawierają one rzeczywiste wartości średnie dla całej populacji wyznaczone w poprzednim podpunkcie.
+
+Ponieważ nie znamy odchylenia standardowego, wzór na przedział ufności dla wartości średniej jest następujący:
+\begin{equation}
+\label{eq:unknownsigma}
+\left[\bar{x} - t_{(1-\frac{\alpha}{2}, n-1)}\frac{s}{\sqrt{n}}, \bar{x} + t_{(1-\frac{\alpha}{2}, n-1)}\frac{s}{\sqrt{n}}\right], 
+\end{equation}
+gdzie $\bar{x}$ to średnia próbkowa, $n$ to liczebność próby, $t_{(1-\frac{\alpha}{2}, n-1)}$ jest kwantylem rzędu $1 - \frac{\alpha}{2}$ z rozkładu t-Studenta z $n-1$ stopniami swobody, gdzie $\alpha$ to poziom istotności, a $s$ jest próbkowym odchyleniem standardowym, czyli:
+\begin{equation}
+s  = \sqrt{\frac{\sum_{i = 1}^{n}(x_i - \bar{x})^2}{n-1}}.
+\end{equation}
+
+Warto zaznaczyć, że powyższe wzory mogą być zaaplikowane do naszego przypadku na mocy Centralnego Twierdzenia Granicznego, mówiącego o tym, że dla dużego rozmiaru próby zmienna będąca średnią próbkową ma rozkład bliski normalnemu. Można zatem zadać pytanie: co to znaczy, że $n$ (rozmiar próby) jest ,,duży"? Mówi się, że $n > 30$ jest wystarczające, aby zadziałało Centralne Twierdzenie Graniczne, jednakże jest to jedynie wiedza ,,empiryczna". Budujemy zatem \textit{asymptotyczne} przedziały ufności, ponieważ przybliżamy rozkład normalny dla coraz większego rozmiaru próby.
+
+Rozwiązanie zadania jest następujące.
+<<echo = TRUE, fig=TRUE, message=FALSE, error=FALSE, fig.align='center', out.width='80%'>>=
+n <- 200
+t <- qt(0.975, n-1)
+# pobranie próbek
+samp_inc <- sample(income$zarobki, n)
+samp_inc_U <- sqrt(samp_inc)
+
+#estymatory 
+est_U <- mean(samp_inc_U, na.rm=T)
+est_D <- mean(samp_inc)
+paste("Estymator U: ", round(est_U, 2))
+paste("Estymator D: ", round(est_D, 2))
+
+#standardowy blad sredniej
+SE_D <- sd(samp_inc, na.rm = T)/sqrt(n)
+SE_U <- sd(samp_inc_U, na.rm = T)/sqrt(n)
+
+# przedzial dla U
+left_U <- est_U - t * SE_U
+right_U <- est_U + t * SE_U
+paste("Przedział ufnosci dla U: [",
+      round(left_U, 2), ",", round(right_U,2), "]")
+
+# przedzial dla D
+left_D <- est_D - t*SE_D
+right_D <- est_D + t*SE_D
+paste("Przedział ufnosci dla D: [",
+      round(left_D, 2), ",", round(right_D,2), "]")
+@
+Przedziału ufności zawierają rzeczywiste parametry, czyli te wyliczone dla całej populacji, pomimo tego, że estymatory $\mu_U$ i $\mu_D$ różnią się od rzeczywistych wartości tego parametru.
+
+\subsection{Podpunkt (c)}
+Popdunkt (b) powtarzamy 200 razy i wyznaczamy histogramy rozkładu estymatorów dla $\mu_U$ i $\mu_D$. Ponadto, naszym zadaniem jest wyznaczenie jak często przedziały ufności zawierały rzeczywistą wartość estymowanego parametru. Mając doświadczenie z poprzedniego zadania możemy postawić hipotezę, że częstość zawierania rzeczywistej wartości średniej przez przedział ufności powinna być zbliżona do 95\%.
+
+<<echo=FALSE, out.width='49%',message=FALSE, fig.align='center', warning=FALSE, fig.show='hold'>>=
+set.seed(1)
+v_U <- c()
+v_D <- c()
+n <- 200
+for (i in 1:200) {
+  samp_inc <- sample(income$zarobki, n)
+  samp_inc_U <- sqrt(samp_inc)
+  
+  est_U <- mean(samp_inc_U, na.rm=T)
+  est_D <- mean(samp_inc, na.rm=T)
+  
+  v_U <- c(v_U, est_U)
+  v_D <- c(v_D, est_D)
+}
+
+df_U <- as.data.frame(v_U)
+df_D <- as.data.frame(v_D)
+
+income_hist_1 <- ggplot(data=df_U, aes(v_U)) + 
+  geom_histogram(aes(y = stat(count)/sum(count)),bins=8, col="darkorange", 
+                 fill="coral",
+                  alpha = 0.7) + 
+  labs(title="Histogram rozkladu estymatora sredniej U") +
+  labs(x="Wartosc estymatora", y="Czestosc")  +
+  scale_x_continuous(labels = dollar)+ 
+  geom_vline(aes(xintercept=mean(income$U, na.rm=T)), color="purple", linetype="dashed", size=1)
+
+
+income_hist_2 <- ggplot(data=df_D, aes(v_D)) + 
+  geom_histogram(aes(y = stat(count)/sum(count)),bins=8, col="purple", 
+                 fill="mediumpurple1",
+                  alpha = 0.7) + 
+  labs(title="Histogram rozkladu estymatora sredniej D") +
+  labs(x="Wartosc estymatora", y="Czestosc")  +
+  scale_x_continuous(labels = dollar)+ 
+  geom_vline(aes(xintercept=mean(income$zarobki, na.rm=T)), color="darkorange2", linetype="dashed", size=1)
+
+income_hist_1
+income_hist_2
+@
+
+Przerywaną linią została zaznaczona rzeczywista wartość średnia dla zmiennych U i D. Wartość z przedziału, w którym średnia jest zawarta występował najczęściej. Dodatkowo, histogramy są zbliżone kształtem do rozkładu normalnego. Estymatorami parametrów $\mu_U$ i $\mu_D$ są po prostu średnie próbkowe, zatem można przypuścić, że histogramy przedstawiają działanie Centralnego Twierdzenia Granicznego.
+
+Częstość zawierania rzeczywistej wartości $\mu_U$ i $\mu_D$ została wyznaczona przy pomocy analogicznej funkcji jak w zadaniu 2. Wyniki są następujące:
+
+<<echo=FALSE, out.width='49%',message=FALSE, fig.align='center', warning=FALSE, fig.show='hold'>>=
+n <- 200
+mean_D <- mean(income$zarobki)
+mean_U <- mean(sqrt(income$zarobki), na.rm=T)
+
+sum_U <- 0
+sum_D <- 0
+
+for (i in 1:200) {
+  samp_inc <- sample(income$zarobki, n)
+  samp_inc_U <- sqrt(samp_inc)
+  
+  est_U <- mean(samp_inc_U, na.rm=T)
+  est_D <- mean(samp_inc, na.rm=T)
+  
+  SE_D <- sd(samp_inc, na.rm = T)/sqrt(n)
+  SE_U <- sd(samp_inc_U, na.rm = T)/sqrt(n)
+  
+  # przedzial dla U
+  left_U <- est_U - t * SE_U
+  right_U <- est_U + t * SE_U
+  
+  left_D <- est_D - t*SE_D
+  right_D <- est_D + t*SE_D
+  
+  if(left_U <= mean_U & mean_U <= right_U) {
+    sum_U = sum_U +1
+  }
+  if(left_D <= mean_D & mean_D <= right_D) {
+    sum_D = sum_D + 1
+  }
+}
+paste("Czestosc dla U: ", (sum_U/200))
+paste("Czestosc dla D: ", (sum_D/200))
+@
+Częstości zawierania zbliżone są do 0.95. Budujemy przedziały asymptotyczne, stąd wartości te nie wynoszą równo 0.95.
+
+\subsection{Podsumowanie i wnioski}
+Zadanie pokazało, że pomimo tego, że rozkład badanych danych nie jest normalny, jesteśmy w stanie zbudować dobre przedziały ufności, czyli zawierające, z prawdopdobieństwem 0.95, średnią wartość badanej zmiennej dla całej populacji. Dodatkowo przetestowaliśmy działanie Centralnego Twierdzenia Granicznego, czyli jednego z najważniejszych twierdzeń w statystyce.
+
+\section{Zadanie 4}
+Korzystamy ze zbioru danych \texttt{grades.txt} zawierającego dane 78 uczniów pewnej szkoły w USA. Zakładamy, że ten zbiór jest prostą próbą losową z pewnej większej populacji. Skonstruujemy dwa przedziały ufności: dla średniego ilorazu inteligencji oraz dla średniego wyniku testu psychologicznego w tej populacji.
+
+Nie znamy odchylenia standardowego dla populacji, więc aby wyznaczyć przedział ufności, skorzystamy ze wzoru \eqref{eq:unknownsigma}. Znów wyznaczamy asymptotyczne przedziały ufności, ponieważ stosujemy przybliżenie przedziału ufności, które jest coraz lepsze im większa jest próba.
+
+\subsection{Asymptotyczny przedział ufności dla średniego poziomu inteligencji}
+Na podstawie próby losowej asymptotyczny przedział ufności na poziomie 95\% dla średniego wyniku IQ wynosi:
+<<echo = FALSE, fig=TRUE, message=FALSE, error=FALSE, fig.align='center', out.width='80%'>>=
+grades <- read.table("grades.txt")
+colnames(grades) <- c("nr ucznia", "srednia", "IQ", "plec", "test psych")
+
+mean <- mean(grades$IQ)
+sd <- sqrt(sum((grades$IQ - mean)^2)/(length(grades$IQ)-1))
+t <- qt(p = 1 - 0.025, df = length(grades$IQ) -1)
+SE <- sd/sqrt(length(grades$IQ))
+left <- mean - t*SE
+right <- mean + t*SE
+paste("[",round(left,2), ",",round(right,2), "]")
+@
+
+\subsection{Asymptotyczny przedział ufności dla średniego wyniku testu psychologicznego}
+Na podstawie próby losowej asymptotyczny przedział ufności na poziomie 95\% dla średniego wyniku testu psychologicznego wynosi:
+<<echo = FALSE, fig=TRUE, message=FALSE, error=FALSE, fig.align='center', out.width='80%'>>=
+mean <- mean(grades$`test psych`)
+sd <- sqrt(sum((grades$`test psych` - mean)^2)/(length(grades$`test psych`)-1))
+t <- qt(p = 1 - 0.025, df = length(grades$`test psych`) -1)
+SE <- sd/sqrt(length(grades$`test psych`))
+left <- mean - t*SE
+right <- mean + t*SE
+paste("[",round(left,2), ",",round(right,2), "]")
+@
+
+\subsection{Podsumowanie i wnioski}
+Nie znamy wartości średniej badanych zmiennych dla całej populacji, dlatego nie możemy sprawdzić, czy asymptotyczne przedziały są poprawne. Mówimy tu oczywiście o zaweiraniu w przedziale ufności średniej jako wartości oczekiwanej danego parametru, a nie średniej próbkowej, która z definicji wzoru na przedział ufności \eqref{eq:unknownsigma} jest w  nim zawarta.
+
+\end{document}

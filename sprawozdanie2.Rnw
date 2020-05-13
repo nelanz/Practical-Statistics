@@ -1,0 +1,430 @@
+\documentclass{article}
+
+\author{Nela Tomaszewicz}
+\title{PSP -- Raport 2}
+\date{Kwiecień 2020}
+
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{natbib}
+\bibliographystyle{apalike}
+\usepackage{mathtools}
+\usepackage{Sweave}[noae]
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{float}
+
+
+\DeclareRobustCommand{\bbone}{\text{\usefont{U}{bbold}{m}{n}1}}
+
+\DeclareMathOperator{\EX}{\mathbb{E}}% expected value
+
+\begin{document}
+\maketitle
+
+\section{Zadanie 1}
+W zadaniu 1 sprawdzamy, czy rozkład wyników testu IQ z omawianego w poprzednim raporcie zbioru danych dotyczących 78 uczniów jest rozkładem normalnym. Dla przypomnienia przeprowadzony test IQ to najprawdopodobniej \textit{Wechsler Intelligence Scale for Children} i interpretacja jego wyników jest następująca.
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+Przedział IQ & Interpretacja  \\ \hline\hline
+$\geq$ 130 & Inteligencja bardzo wysoka  \\ \hline
+120-129 & Inteligencja wysoka \\ \hline
+110-119 & Inteligencja powyżej przeciętnej\\ \hline
+90-109 & Inteligencja przeciętna\\ \hline
+70-89 & Inteligencja niższa niż przeciętna\\ \hline
+$\leq$ 69 & Upośledzenie umysłowe \\ \hline
+\end{tabular}
+\end{center}
+
+W zadaniu będziemy sprawdzać, czy rozkład wyników testu IQ jest normalny na dwa sposoby. Pierwszym jest \textbf{reguła 68\% - 95\% - 99.7 \%} polegająca na sprawdzeniu, czy w przybliżeniu 68\% obserwacji zawiera się w przedziale $[\overline{x} - s, \overline{x} + s]$, 95\% obserwacji zawiera się w przedziale $[\overline{x} - 2s, \overline{x} + 2s]$, a 99.7\% obserwacji zawiera się w $[\overline{x} - 3s, \overline{x} + 3s]$, gdzie $\overline{x}$ jest średnią obserwacji, a $s$ odchyleniem standardowym. Drugim omawianym sposobem jest narysowanie \textbf{wykresu kwantylowego}, czyli \textbf{QQ-plot}. Jeśli dane mają rozkład zbliżony do normalnego, punkty na wykresie powinny leżeć blisko prostej wyznaczonej przez pakiet. 
+
+Wstępną informację dotyczącą rozkładu zmiennej można również zauważyć analizując histogram. 
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide', error=FALSE, fig.align='center', out.width='80%'>>=
+library(ggplot2)
+library(scales)
+
+freedman_diaconis <- function(prob) {
+  IQR <- quantile(prob, 0.75) - quantile(prob, 0.25)
+  bin_width <- 2 * IQR/(length(prob)^(1/3))
+  return(bin_width)
+}
+
+grades <- read.table("grades.txt")
+colnames(grades) <- c("nr ucznia", "srednia", "IQ", "plec", "test psych")
+
+IQ_hist <- ggplot(data=grades, aes(grades$IQ)) + 
+  geom_histogram(binwidth = freedman_diaconis(grades$IQ), col="red", 
+                 fill="green", 
+                 alpha = .2) + 
+  labs(title="Histogram wyników testu IQ uczniów") +
+  labs(x="Wynik testu IQ", y="Liczba uczniów")    
+
+IQ_hist
+@
+Histogram nie do końca przypomina symetryczną krzywą dzwonową charakterystyczną dla rozkładu normalnego z powodu niepokojącej asymetrii pomiędzy prawą stroną a lewą, patrząc od najwyższego binu. Dodatkowo pierwszy bin jest wyższy niż drugi, a gdyby dane miały rozkład normalny, to byłby on niższy. Sprawdźmy jednak normalność wspomnianymi wcześniej sposobami.
+
+\subsection{Reguła 68\% - 95\% - 99.7 \%}
+Liczbę i procent obserwacji w poszczególnych przedziałach pokażę w tabeli.
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+Przedział & Liczba obserwacji & Procent wszystkich obserwacji \\ \hline\hline
+$[\overline{x} - s, \overline{x} + s]$ & 55 & $\approx 70.5\%$ \\ \hline
+$[\overline{x} - 2s, \overline{x} + 2s]$ & 73 & $\approx 93.5\%$ \\ \hline
+$[\overline{x} - 3s, \overline{x} + 3s]$ & 78 & 100\% \\ \hline
+\end{tabular}
+\end{center}
+
+Wyliczone wartości procentowe odpowiadają w przybliżeniu wartościom dla rozkładu normalnego. 
+
+\subsection{QQ--plot}
+QQ--plot dla wyników testu IQ został przedstawiony poniżej.
+
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide', error=FALSE, fig.align='center', out.width='80%'>>=
+
+ggplot(data=grades, aes(sample = grades$IQ)) + 
+  stat_qq() +
+  stat_qq_line() +
+  labs(title = "Wykres kwantylowy dla wyników testu IQ") +
+  labs(x = "Kwantyle teoretyczne", y = "Kwantyle próbkowe")
+
+@
+Większość punktów leży na lub w pobliżu prostej. Mediana wyników testu IQ wynosi 110 i możemy zauważyć, że na przecięciu 110 i $z = 0$ (kwantyl teoretyczny) leży punkt. Punkty wyznaczające niskie wyniki testu nie leżą na prostej i są od niej oddalone. Faktycznie, patrząc na histogram, możemy zauważyć, że pierwszy bin jest wyższy od kolejnych binów, co zaburza rozkład. Jednakże w przypadku takiego wykresu nasuwa się pytanie: co to znaczy, że punkty są blisko prostej? Czy taki układ punktów na wykresie można przyjąć za normalny? Na udzielenie lepszych odpowiedzi na te pytania pozwala wykres \texttt{qqPlot} z biblioteki \texttt{car}, który poza linią z poprzedniego wykresu wyznacza także przedziały, w których muszą zawierać się punkty z wykresu kwantylowego, żeby można było przypuścić, że rozkład jest normalny.
+
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide', error=FALSE, fig.align='center', out.width='80%'>>=
+library(car)
+qqPlot(grades$IQ, xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", main = "Wykres kwantylowy dla wyników testu IQ")
+@
+Widzimy, że nie wszystkie punkty na wykresie zawierają się w przedziale wyznaczonym przez \texttt{qqPlot}. Możemy zatem z większą pewnością (oczywiście nie 100\%, bo w statystyce niczego nie możemy być na 100\% pewni!) powiedzieć, że rozkład wyników testu IQ uczniów nie jest rozkładem normalnym.
+
+\subsection{Podsumowanie i wnioski}
+Zadanie pokazuje, że reguła 68\% - 95\% - 99.7\% nie jest najlepszą możliwą metodą sprawdzenia czy rozkład zmiennej ilościowej jest normalny. Znacznie lepsze jest wyznaczenie wykresu kwantylowego, w R najbardziej pomocny jest \texttt{qqPlot} z biblioteki \texttt{car}.
+
+\section{Zadanie 2}
+Korzystając ze zbioru danych \texttt{income.txt} sprawdzamy, czy rozkład zarobków jest normalny. W tym celu użyjemy wykresu \texttt{qqPlot} z biblioteki \texttt{car} wykorzystanego w poprzednim zadaniu. Dla zarobków mamy wykres pokazany poniżej.
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide', error=FALSE, fig.align='center', out.width='80%'>>=
+income <- read.table("income.txt")
+colnames(income) <- c("nr", "wiek", "wykszt", "plec", "zarobki", "sektor")
+library(car)
+qqPlot(income$zarobki, xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", main = "Wykres kwantylowy dla zarobków")
+@
+Duża część punktów na wykresie nie zawiera się w przedziałach wyznaczonych przez \texttt{qqPlot}, zatem możemy stwierdzić, że rozkład zarobków nie jest normalny, co przykładowo mogłoby uniemożliwić przeprowadzenie pewnych testów statystycznych takich jak na przykład t-test.
+
+Sprawdźmy zatem, czy przekształcając zmienne losowe w sposób nieliniowny, będziemy w stanie uzyskać rozkład normalny. Sprawdzimy cztery przekształcenia: $\sqrt{X}$, $\log{X}$, $\sqrt[3]{X}$ oraz $X^2$.
+
+
+<<echo=FALSE, fig=TRUE, message=FALSE, results='hide', warning=FALSE, error=FALSE, fig.show='hold', fig.align='center', out.width='49%'>>=
+qqPlot(sqrt(income$zarobki), xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", main = "Wykres kwantylowy dla zarobków\nPrzekształcenie sqrt(X)")
+qqPlot(log(income$zarobki), xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", main = "Wykres kwantylowy dla zarobków\nPrzekształcenie logX")
+qqPlot((income$zarobki)^(1/3), xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", main = "Wykres kwantylowy dla zarobków\nPrzekształcenie X^(1/3)")
+qqPlot((income$zarobki)^2, xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", main = "Wykres kwantylowy dla zarobków\nPrzekształcenie X^2")
+@
+
+Żaden z wykresów kwantylowych nie pokazuje rozkładu normalnego. Przy pomocy prostych transformacji nie udało się przekszatłcić danych, tak aby pochodziły z rozkładu normalnego. 
+
+\subsection{Podsumowanie i wnioski}
+Przekształcenia przetestowane w zadaniu nie należą do zaawansowanych (takich jak na przykład transformacja Boxa-Coxa). Widzimy także, że nie pasują one do danych o zarobkach, między innymi dlatego, że przekształcenia takie jak $\log(X)$, $\log_{10}{X}$ oraz $\sqrt{X}$ nie powinny być aplikowane do ujemnych danych, a takie znajdują się w naszym zbiorze. Przez to także widzimy, że stosunkowo ,,najlepiej" poradziła sobie transformacja pierwiastkiem sześciennym, która może być aplikowana do danych zawierających liczby ujemne. Podniesienie do kwadratu spowodowało zupełne zaburzenie rozkładu. 
+
+
+\section{Zadanie 3}
+W zadaniu badamy trajektorie różnych statystyk tworzące się na skutek losowania danych ze zbioru \texttt{income.txt}. W obydwu podpunktach losujemy dziesięciokrotnie próby różnej liczności.
+
+\subsection{Proste próbkowanie losowe}
+Losujemy 1000 elementów ze znioru danych \texttt{income.txt} zawierającego zarobki, wiek, wykształcenie i sektor zatrudnienia 55~899 osób ze Stanów Zjednoczonych. Zastosujemy proste próbkowanie losowe, zakładając, że każda osoba ma jednakowe prawdopodobieństwo zostania wylosowaną. Trajektorie statystyk: średnia, mediana, odchylenie standardowe i IQR zostaną wykreślone dla zmiennej ilościowej oznaczającej zarobki w dolarach. Ostatnia statystyka nie jest związana z zarobkami -- wyznacza procent osób w próbie mających co najmniej licencjat. Pierwsze cztery wykresy trajektorii zostały wyznaczone przy pomocy następującej funkcji, której kod został podany poniżej.
+<<message=FALSE>>=
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+set.seed(1)
+
+income_sampling <- function(statistic, statistic_name) {
+  # pusty wektor dla pierwszych t elementów 
+  t_elem <- c() 
+  # pusty wektor dla losowania
+  sample_income <- c() 
+   # pusta ramka danych dla późniejszego zapisywania wyników
+  df <- data.frame(matrix(NA, nrow = 1000, ncol = 10))
+  
+  for(i in 1:10) {
+    sample_income <- sample(income$zarobki, 1000)
+    for (j in 1:1000) {
+      #obliczenie wartości odpowiedniej statystyki
+      t_elem[j] <- statistic(sample_income[1:j]) 
+    }
+    #zapisywanie wynikow jako kolumn
+    df[,i] <- t_elem 
+  }
+  
+  df <- df %>%
+    mutate(times = 1:nrow(df))
+  #funkcja melt 'skleja' ramkę
+  #dzięki czemu mozemy narysowac wykres
+  df <- melt(df, id = 'times')
+  
+  g <- ggplot(df, aes(times, value)) + 
+    geom_line(aes(colour = variable), show.legend = F, 
+              size = 0.75) +
+    labs(title = paste("Trajektorie statystyki: ", 
+                       statistic_name)) +
+    labs(x="Liczba osób", y="Zarobki") +
+    geom_hline(yintercept = statistic(income$zarobki), 
+               linetype = "dashed",
+               color = "red", 
+               size = 1.15)
+  
+  return(g)
+}
+@
+Funkcja przyjmuje interesującą nas statystykę i jej polską nazwę, dzięki czemu automatyzujemy generowanie wykresów. Zwraca wykres trajektorii statystyki liczonej w oparciu o pierwszych t elementów ($t \in [1, 1000]$). W przypadku naszych danych tymi ,,elementami" są osoby. Czerwoną przerywaną linią zaznaczono wartości statystyk dla całej próby.
+
+Wykresy oraz wywołania dla pierwszych dwóch statystyk:
+<<echo=TRUE, fig=TRUE, message=FALSE, results='hide', warning=FALSE, error=FALSE, fig.show='hold', fig.align='center', out.width='49%'>>=
+income_sampling(mean, "średnia zarobków")
+income_sampling(median, "mediana zarobków")
+@
+Obydwa wykresy stabilizują się na poziomie wartości statystyk dla całej próby, wtedy gdy liczba osób jest większa niż około 250 (w przypadku średniej) oraz większa niż około 325 (w przypadku mediany). Dla małej próby, czyli mniejszej niż 250 osób, możemy zauważyć, że mediana osiąga wyniki bardziej oddalone od swojej wartości dla całej próby niż średnia.
+
+
+Dla rozstepu międzykwartylowego (IQR) zaimplementowałam następującą funkcję:
+<<echo=TRUE, fig=TRUE, message=FALSE, results='hide', warning=FALSE, error=FALSE, fig.show='hold', fig.align='center', out.width='49%'>>=
+income_sampling(sd, "odchylenie standardowe zarobków")
+
+IQR <- function(x) {
+  return(quantile(x, 0.75) - quantile(x, 0.25))
+}
+
+income_sampling(IQR, "IQR zarobków")
+@
+Odchylenie standarowe, podobnie jak mediana, dla małej liczby osób ($< 250$) osiąga wyniki bardziej oddalone od wartości dla całej próby niż, przykładowo, IQR czy średnia. To zjawisko można wytłumaczyć analizując wzór na odchylenie standardowe ($\sigma$) wyglądający następująco:
+\[\sigma = \sqrt{\frac{\sum{(x_i - \mu)^2}}{N}},\]
+gdzie $N$ to rozmiar próby, $x_i$ -- wartość zmiennej w próbie, a $\mu$ to wartość średnia próby. Ponieważ $N$ jest w mianowniku, im większa jego wartość, tym mniejsza wartość odchylenia standardowego. Na wykresie możemy zauważyć, że dla dużych ($250 <$) N oznaczonych jako liczba osób, trajektorie odchylenia standardowego ,,spłaszczają" się. Podobne zjawisko możemy zaobserwować dla średniej próbkowej ($\bar{x}$), której wzór jest następujący: \[\bar{x} = \frac{\sum{x_i}}{N}.\] W przypadku tej statystyki szybciej osiągamy poziom wyliczony dla całej próby, ponieważ w mianowniku znajduje się $N$, a nie $\sqrt{N}$. 
+
+Jeśli chodzi o medianę i rozstęp międzykwartylowy, większa liczba osób gwarantuje większe zróżnicowanie pomiędzy zarobkami. Wartość środkowa zbliża się wtedy do wartości dla całej próby, a pomiędzy kwartylami pierwszym i trzecim zawiera się więcej wartości.
+
+Ostatnią omawianą statystyką jest procent osób mających co najmniej licencjat. Wykres narysowałam, stosując bardzo podobny kod do funkcji \verb|income_sampling| zamieniając losowanie z wektora zarobków na losowanie z wektora wykształcenia, czyli \verb|sample(income$wykszt, 1000)|. Wyliczenie procentowych wartości wykonałam, sumując liczbę wszystkich osób z wykształceniem większym lub równym 5 (czyli wykształceniem wyższym i równym licencjatowi), dzieląc przez obecną wartość $t$ ($t \in [1, 1000]$) i mnożąc przez 100. Pozostałe elementy kodu zostały takie jak we wcześniej omawianej funkcji. Powstały wykres został zaprezentowany poniżej.
+<<echo=FALSE, fig=TRUE, message=FALSE, results='hide', warning=FALSE, error=FALSE, fig.show='hold', fig.align='center', out.width='70%'>>=
+t_elem <- c() # pusty wektor dla pierwszych t elementów 
+sample_ed <- c() # pusty wektor dla losowania
+df <- data.frame(matrix(NA, nrow = 1000, ncol = 10)) # pusta ramka danych dla późniejszego zapisywania wyników
+
+for(i in 1:10) {
+  sample_ed <- sample(income$wykszt, 1000)
+  for (j in 1:1000) {
+    t_elem[j] <- sum(sample_ed[1:j] >= 5)/j * 100# obliczenie wartości odpowiedniej statystyki
+  }
+  df[,i] <- t_elem # zapisywanie wynikow jako kolumn
+}
+
+df <- df %>%
+    mutate(times = 1:nrow(df))
+
+# sklejamy ramke do jednej kolumny
+df <- melt(df, id = 'times') 
+
+g <- ggplot(df, aes(times, value)) + 
+  geom_line(aes(colour = variable), show.legend = F, size = 0.75) +
+  labs(title = paste("Trajektorie procentu osób mających co najmniej licencjat")) +
+  labs(x="Liczba osób", y="Procent") +
+  geom_hline(yintercept = 29.7, linetype = "dashed", color = "red", size = 1.15)
+g
+@
+Trajektorie tej statystyki stabilizują się w przypadku liczby osób większej niż około 325. 
+
+\subsubsection{Podsumowanie i wnioski}
+
+Związek między liczbą osób a definicjami odpowiednich statystyk został omówiony wcześniej. Porównując narysowane wykresy z dokładnymi wartościami dla całej próby:
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+Sr. & Mediana & Odchylenie std. & IQR & \% osob z min. licencjatem   \\ \hline
+37864.61 & 29717 & 36158.03 & 29503.5  & $\approx 29.7$  \\
+\hline
+\end{tabular}
+\end{center}
+
+możemy zauważyć, że dla odpowiedniej liczby osób (zazwyczaj większej niż około 250) otrzymujemy wartości statystyk zbliżone do wartości wyliczonej dla całej próby. Oznacza to, że w przypadku posiadanych przez nas danych, aby próbkowanie miało sens i dawało odpowiednie, czyli oddające charakter wszystkich danych, rezultaty dla obliczanych statystyk należy wylosować grupę większą niż 250 osób. W przypadku wylosowania mniejszej grupy osób moglibyśmy popełnić duży \textit{błąd próbkowania} wynikający z niewystarczającej reprezentacji całej próby.
+
+\subsection{Próbkowanie warstwowe}
+Zastosujemy próbkowanie warstwowe ze względu na sektor zatrudnienia, czyli będziemy dziesięć razy losować grupę 100-osobową ze zbioru \texttt{income.txt}, gdzie w każdej takiej grupie liczba osób z danego sektora będzie odpowiadać procentowi osób z całego sektora. W zbiorze danych mamy trzy sektory oznaczone liczbami 5, 6, 7, gdzie 5 oznacza sektor prywatny, 6 sektor publiczny, a 7 samozatrudnienie. Procentowy udział każdego z sektorów w zbiorze danych jest następujący:
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide', error=FALSE, fig.align='center', out.width='80%'>>=
+df <- data.frame(
+  sektor = c("publiczny", "prywatny", "samozatrudnienie"),
+  procent = c(73, 17, 10)
+)
+ggplot(df, aes(x="", y=procent, fill=sektor)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar("y", start = 0) +
+  geom_text(aes(label = paste0(procent, "%")), position = position_stack(vjust = 0.5)) + theme(axis.line = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          plot.title = element_text(hjust = 0.5))+ 
+  labs(x = NULL, y = NULL, fill = NULL, title = "Procentowy udział sektorów")
+@
+W każdej 100-elementowej próbie będziemy losować 73 osoby z sektora publicznego, 17 z sektora prywatnego oraz 10 z samozatrudniających. Naszym zadaniem jest wykonanie poprawnego losowania, a następnie wyznaczenie trajektorii wybranych statystyk. W moim przypadku będą to: średnia, mediana, odchylenie standardowe oraz rozstęp międzykwartylowy (IQR). Funkcja do wykonania zadania jest następująca.
+<<message=FALSE, warning=FALSE>>=
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+#ziarno, zeby za kazdym razem nie dostawac innych wykresow
+set.seed(1) 
+
+strat_income_sampling <- function(statistic, statistic_name) {
+  temp_income <- income 
+  
+  #sektory procentowo
+  sizes <- round(table(income$sektor)/nrow(income)*100) 
+  df <- data.frame(matrix(NA, nrow = 10, ncol = 10))
+  
+  # pętla powtarzająca eksperyment
+  for(k in 1:10) {
+    temp_income <- income
+    sektory_total <- data.frame()
+    stat_value <- c()
+      for (i in 1:10) {
+        # losowanie dla każdego z sektorów autorstwa
+        # Pani Giniewicz
+        sektor5 <-temp_income[temp_income$sektor==5,]
+        idx5 <-sample(nrow(sektor5),sizes[1])
+        sektor5_df <- sektor5[idx5,]
+        
+        sektor6 <-temp_income[temp_income$sektor==6,]
+        idx6 <-sample(nrow(sektor6),sizes[2])
+        sektor6_df <- sektor6[idx6,]
+        
+        sektor7 <-temp_income[temp_income$sektor==7,]
+        idx7 <-sample(nrow(sektor7),sizes[3])
+        sektor7_df<- sektor7[idx7,]
+        
+        #połączenie wylosowanych obserwacji z trzech sektorów
+        sektory <- rbind(sektor5_df, sektor6_df, sektor7_df)
+        
+        #zapamietywanie poprzedniego losowania
+        #dopisywanie kolejnego
+        sektory_total <- rbind(sektory_total, sektory)
+        
+        #wyliczenie trajektorii
+        stat_value[i] <- statistic(sektory_total$zarobki)
+        
+        temp_income <- setdiff(temp_income, sektory_total)
+      }
+    #wyliczone wartosci statystyki
+    df[,k] <- stat_value
+  }
+  
+  #nowa ramka danych potrzebna do rysowania wykresow
+  df <- df %>%
+    mutate(number = (1:nrow(df))*100)
+  #'sklejenie' ramki do dwoch kolumn 
+  # w celu narysowania wykresów
+  df <- melt(df, id="number")
+  
+  #wykres trajektorii statystyki
+  g <- ggplot(data=df, aes(x=number, y=value)) + 
+    geom_line(aes(color=variable), show.legend = F,
+              size = 0.75) +
+    labs(title = paste("Trajektoria statystyki:", 
+                       statistic_name)) +
+    labs(x="Liczba osób", y="Zarobki") +
+    geom_hline(yintercept = statistic(income$zarobki), 
+               linetype = "dashed", color = "red", 
+               size = 1.15)
+    
+  return(g)
+}
+@
+Tak jak poprzednio, funkcja przyjmuje nazwę po angielsku i po polsku odpowiedniej statystyki, której trajektorię chcemy badać i zwraca wykres. Wywołania funkcji dla dwóch pierwszych statystyk:
+<<echo=TRUE, out.width='49%', fig.show='hold', fig.align='center'>>=
+strat_income_sampling(mean, "Srednia zarobków")
+strat_income_sampling(median, 'Mediana zarobków')
+@
+\newpage
+Dwa pozostałe wykresy trajektorii:
+
+\begin{figure}[H]
+  \makebox[\textwidth]{
+  \includegraphics[width=0.5\textwidth]{sd.jpeg}%
+  \hfill    
+  \includegraphics[width=0.5\textwidth]{IQR_wyszlo.jpeg}%
+
+}
+\end{figure}
+Trajektorie stabilizują się na poziomie zbliżonym do wartości statystyki dla całej próby, jednakże możemy zauważyć różnice wynikające z faktu, że losujemy więcej osób z konkretnego sektora. Przykładem takich różnic jest wykres trajektorii dla odchylenia standardowego, gdzie 7 z 10 linii wyznaczających wartości odchylenia w każdym z eksperymentów stabilizuje się poniżej wartości dla całej próby. Ponieważ na 170 przypadków zarobków ujemnych aż 163 ma miejsce w sektorze 7, czyli w sektorze wyznaczającym osoby z samozatrudnienia, odchylenie od wartości średniej jest mniejsze, gdy losujemy za każdym razem tylko 10 osób z tego sektora.
+
+\subsubsection{Podsumowanie i wnioski}
+Patrząc na wykresy trajektorii w przypadku próbkowania warstwowego, możemy zauważyć, że potrzeba większej liczby osób niż w prostym próbkowaniu losowym, aby trajektorie były stabilne. Wynika to z dużych różnic w udziale sektorów zatrudnienia w zbiorze danych. Jednakże takie próbkowanie lepiej oddaje stan rzeczywisty danych, ponieważ nieprzypadkowo w zbiorze jest 73\% osób pracujących w sektorze publicznym.
+
+\section{Zadanie 4}
+W zadaniu symulujemy dziesięciokrotnie eksperyment polegający na 1000 rzutów monetą. Dla każdego z eksperymentów wykreślamy trajektorie liczby frakcji orłów w kolejnych $k$ rzutach, gdzie $k$ należy do przedziału $[1, 1000]$. Zadanie rozwiązałam implementując następującą funkcję:
+<<>>=
+library(ggplot2)
+library(reshape2)
+
+# Oznaczenia: 1 - orzeł, 0 - reszka
+
+coin_tossing <- function(p) {
+  #pusty wektor dla pierwszych k elementów 
+  k_elem <- c() 
+  #pusty wektor dla symulacji rzutu monetą
+  tossing <- c() 
+  #pusta ramka danych dla późniejszego zapisywania wyników
+  df <- data.frame(matrix(NA, nrow = 1000, ncol = 10)) 
+  
+  for(i in 1:10) {
+    tossing <- rbinom(1000, 1, prob=p)
+    for (j in 1:1000) {
+      # frakcja
+      k_elem[j] <- sum(tossing[1:j])/j 
+    }
+    # zapisywanie wynikow frakcji jako kolumn w ramce
+    df[,i] <- k_elem 
+  }
+  
+  df <- df %>%
+    mutate(times = 1:nrow(df))
+  
+  # sklejamy ramkę w celu wykonania wykresu
+  df <- melt(df, id = 'times')
+  
+  # wykres trajektorii
+  g <- ggplot(df, aes(times, value)) + 
+    geom_line(aes(colour = variable), show.legend = F,
+              size = 0.75) +
+    labs(title = paste("Trajektorie frakcji orłów w 10 eksperymentach rzutu monetą, p = ", p)) +
+    labs(x="Liczba rzutów", y="Frakcja orłów") 
+  
+  return(g)
+}
+@
+Funkcja \verb|coin_tossing()| przyjmuje jako argument $p$ czyli prawdopodobieństwo sukcesu. Zwraca wykres z trajektoriami frakcji orłów. Wywołanie funkcji dla $p = 0.5$, czyli ,,sprawiedliwego" rzutu monetą pokazano poniżej.
+
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide', error=FALSE, fig.align='center', out.width='75%'>>=
+coin_tossing(p = 0.5)
+@
+
+Wywołania funkcji dla niesymetrycznego rzutu monetą ($p = 0.3$ i $p = 0.7$) dają następujące wyniki.
+
+<<echo=FALSE, out.width='49%', fig.show='hold', fig.align='center'>>=
+coin_tossing(p = 0.3)
+coin_tossing(p = 0.7)
+@
+Na wykresach można zauważyć, że trajektorie po około 250 rzutach zaczynają się stabilizować na poziomie wartości $p$ oznaczającej prawdopodobieństwo sukcesu. Jest to ilustracja Prawa Wielkich Liczb (konkretniej Mocnego Prawa Wielkich Liczb \cite{wiki1}), mówiącego, że średni wynik eksperymentu powtarzanego w dużej liczbie prób powinien zbliżać się do wartości oczekiwanej. W przypadku gdy zmienna losowa X pochodzi z rozkładu dwumianowego wzór na wartość oczekiwaną to $\EX(X) = np$. W naszym przypadku liczba prób $n$ jest równa 1, zatem $\EX(X) = p$. Zatem na wykresach widzimy, że dla dużej liczby rzutów trajektorie stabilizują się na poziomie $p = 0.5, 0.3, 0.7$, czyli na poziomie odpowiednich wartości oczekiwanych.
+
+\subsection{Podsumowanie i wnioski}
+Omawiane w zadaniu zdarzenia są niezależne. Nie możemy przewidzieć wyniku rzutu monetą, ale dzięki Prawu Wielkich Liczb wiemy, że z czasem, konsekwentnie rzucając monetą, $p\%$ wyników będą stanowić orły, czyli odniesione sukcesy.
+
+
+\begin{thebibliography}{9}
+
+\bibitem{wiki1}
+Law of Large Numbers, \url{https://en.wikipedia.org/wiki/Law_of_large_numbers}
+
+
+\end{thebibliography}
+
+\end{document}
