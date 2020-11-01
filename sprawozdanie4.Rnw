@@ -1,0 +1,487 @@
+\documentclass[a4paper,12pt]{article}
+
+\author{Nela Tomaszewicz}
+\title{PSP -- Raport 4}
+\date{Czerwiec 2020}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{natbib}
+\bibliographystyle{apalike}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor}
+
+\hypersetup{
+    colorlinks=true,
+    urlcolor=blue,
+    citecolor=green!70!black
+}
+
+\begin{document}
+\maketitle
+
+\section{Zadanie 1}
+\label{sec:zad1}
+W zadaniu generujemy parami różne próby z rozkładu normalnego, a następnie konstruujemy 95\% przedziały ufności dla różnicy dwóch średnich $\mu_2 - \mu_1$. Przedział na poziomie ufności $1 - \alpha$ dla różnicy dwóch średnich wyrażamy następującym wzorem:
+
+\begin{equation}
+\label{eq:eq1}
+(\bar{y_2} - \bar{y_1}) \pm t_{(df, 1-\frac{\alpha}{2})}SE_{\bar{y_2} - \bar{y_1}},
+\end{equation}
+gdzie $\bar{y_1}$ oznacza średnią próbkową z pierwszej próby, $\bar{y_2}$ średnią próbkową z drugiej próby, $\alpha$ oznacza poziom istotności, $t_{(df, 1-\frac{\alpha}{2})}$ jest kwantylem rzędu $1 - \frac{\alpha}{2}$ z rozkładu t--Studenta z liczbą stopni swobody $df$ określoną następującym wzorem:
+\begin{equation}
+df = \frac{(SE_1^2 + SE_2^2)^2}{\frac{SE_1^4}{n_1-1} + \frac{SE_2^4}{n_2-1}},
+\end{equation}
+gdzie $n_1$ i $n_2$ to liczności pierwszej i drugiej próby, natomiast $SE_1$ i $SE_2$ to standardowe błędy średniej $\left( SE_1 = \frac{s_1}{n_1}, SE_2 = \frac{s_2}{n_2} \right)$. Ostatnią nieomówioną częścią wzroru \eqref{eq:eq1} jest standardowy błąd dla różnicy dwóch średnich, czyli $SE_{\bar{y_2} - \bar{y_1}}$. Może on być wyrażony na dwa sposoby: jako błąd nieuśredniony (niełączony, ang. \textit{unpooled}) lub uśredniony (łączony, ang. \textit{pooled}). $SE$ nieuśrednione wyrażamy wzorem:
+\begin{equation}
+(N)SE = \sqrt{SE_1^2 + SE_2^2}.
+\end{equation}
+Do wyznaczenia uśrednionego $SE$ na początek musimy wyznaczyć sumę kwadratów odchyleń dla obydwu prób, czyli $SS_1 = \sum{(y_{1,i} - \bar{y_1})^2}$ oraz $SS_2 = \sum{(y_{2,i} - \bar{y_2})^2}$. Następnie, wyznaczamy uśrednioną wariancję, czyli $s_c^2 = \frac{SS_1 + SS_2}{n_1 + n_2 - 2}$. Teraz możemy skonstruować uśrednione $SE$ :
+\begin{equation}
+(U)SE = \sqrt{sc^2 \left( \frac{1}{n_1} + \frac{1}{n_2} \right )}
+\end{equation}
+
+
+Pierwszą część zadania polegającą na wyznaczeniu przedziałów ufności wykonam przy pomocy następującej funkcji.
+<<>>=
+set.seed(1)
+@
+
+<<>>=
+conf_interval <- function(n1, mi1, sd1, n2, mi2, sd2) {
+  norm_a_1 <- rnorm(n1, mi1, sd1)
+  norm_a_2 <- rnorm(n2, mi2, sd2)
+  alfa <- 0.05
+  
+  SE_1 <- sd(norm_a_1)/sqrt(n1) 
+  SE_2 <- sd(norm_a_2)/sqrt(n2)
+  
+  NSE <- sqrt(SE_1^2 + SE_2^2)
+  
+  mean_1 <- mean(norm_a_1)
+  mean_2 <- mean(norm_a_2)
+  SS_1 <- sum((norm_a_1 - mean_1)^2)
+  SS_2 <- sum((norm_a_2 - mean_2)^2)
+  
+  sc <- sqrt((SS_1 + SS_2)/(length(norm_a_1) + length(norm_a_2) - 2))
+  
+  USE <- sc*sqrt(1/length(norm_a_1) + 1/length(norm_a_2))
+  
+  df <- (SE_1^2 + SE_2^2)^2/((SE_1^4/(n1 - 1)) + (SE_2^4/(n2 - 1)))
+  
+  two_means <- mean_2 - mean_1
+  t <- qt(df = df, p = 1 - alfa/2)
+  
+  # dla NSE
+  left_N <- two_means - t*NSE
+  right_N <- two_means + t*NSE
+  
+  # dla USE
+  left_U <- two_means - t*USE
+  right_U <- two_means + t*USE
+  
+  cat("Przedzial ufnosci z NSE: [", left_N, ",", right_N, "]", "\n")
+  cat("Przedzial ufnosci z USE: [", left_U, ",", right_U, "]")
+}
+@
+Funkcja przyjmuje parametry obydwu rozkładów i zwraca odpowiednie przedziały ufności.
+
+\subsection{Podpunkt (a)}
+\label{sub:a}
+Generujemy 5--elementową próbę z rozkładu $N(0,1)$ oraz 10--elementową próbę z rozkładu $N(20, 10)$ i konstruujemy dwa przedziały ufności (jeden z $(N)SE$, a drugi z $(U)SE$) dla różnicy średnich.
+<<echo=FALSE>>=
+conf_interval(n1=5, mi1 = 0, sd1 = 1, n2 = 10, mi2 = 20, sd2 = 10)
+@
+Przedział ufności skonstruowany przy użyciu $(U)SE$ jest szerszy.
+
+\subsection{Podpunkt (b)}
+\label{sub:b}
+Generujemy 5--elementową próbę z rozkładu $N(0,1)$ oraz 10--elementową próbę z rozkładu $N(20, 1)$ i wyznaczamy przedziały ufności.
+<<echo=FALSE>>=
+conf_interval(n1=5, mi1 = 0, sd1 = 1, n2 = 10, mi2 = 20, sd2 = 1)
+@
+Przedziały ufności są do siebie bardzo podobne.
+
+\subsection{Podpunkt (c)}
+\label{sub:c}
+Generujemy 10--elementową próbę z rozkładu $N(0,1)$ oraz 10--elementową próbę z rozkładu $N(20, 10)$ i wyznaczamy przedziały ufności.
+<<echo=FALSE>>=
+conf_interval(n1=10, mi1 = 0, sd1 = 1, n2 = 10, mi2 = 20, sd2 = 10)
+@
+Przedziały są takie same.
+
+\subsection{Powtórzenie 1000 razy}
+Aby lepiej zrozumieć badane przedziały, powtarzamy 1000 razy eksperyment polegający na losowaniu odpowiednich prób i wyznaczaniu przedziałów ufności i porównujemy prawdopodobieństwo pokrycia $\mu_2 - \mu_1$ oraz średnie długości dla obu przedziałów. W tym celu przerobiłam funkcję używaną poprzednio na taką, która zwraca wektor zawierający kolejno: lewy i prawy koniec dla przedziału konstruowanego przy użyciu $(N)SE$ oraz lewy i prawy koniec dla przedziału konstruowanego przy użyciu $(U)SE$. Następnie zaimplementowałam następującą funkcję powtarzającą eksperyment 1000 razy i zwracającą odpowiednie wartości dla badanych parametrów.
+
+<<echo=FALSE>>=
+conf_interval <- function(n1, mi1, sd1, n2, mi2, sd2) {
+  norm_a_1 <- rnorm(n1, mi1, sd1)
+  norm_a_2 <- rnorm(n2, mi2, sd2)
+  alfa <- 0.05
+  
+  SE_1 <- sd(norm_a_1)/sqrt(n1) 
+  SE_2 <- sd(norm_a_2)/sqrt(n2)
+  
+  NSE <- sqrt(SE_1^2 + SE_2^2)
+  
+  mean_1 <- mean(norm_a_1)
+  mean_2 <- mean(norm_a_2)
+  SS_1 <- sum((norm_a_1 - mean_1)^2)
+  SS_2 <- sum((norm_a_2 - mean_2)^2)
+  
+  sc <- sqrt((SS_1 + SS_2)/(length(norm_a_1) + length(norm_a_2) - 2))
+  
+  USE <- sc*sqrt(1/length(norm_a_1) + 1/length(norm_a_2))
+  
+  df <- (SE_1^2 + SE_2^2)^2/((SE_1^4/(n1 - 1)) + (SE_2^4/(n2 - 1)))
+  
+  two_means <- mean_2 - mean_1
+  t <- qt(df = df, p = 1 - alfa/2)
+  
+  # dla NSE
+  left_N <- two_means - t*NSE
+  right_N <- two_means + t*NSE
+  
+  # dla USE
+  left_U <- two_means - t*USE
+  right_U <- two_means + t*USE
+  
+  int <- c(left_N, right_N, left_U, right_U)
+  return(int)
+}
+@
+
+<<>>=
+conf_interval_rep <- function(n1, mi1, sd1, n2, mi2, sd2) {
+  prob_N <- 0
+  prob_U <- 0
+  
+  v_N <- c()
+  v_U  <- c()
+  
+  for(i in 1:1000) {
+    interval <- conf_interval(n1, mi1, sd1, n2, mi2, sd2)
+    v_N[i] <- interval[2] - interval[1]
+    v_U[i] <- interval[4] - interval[3]
+    
+    real_mean <- mi2 - mi1
+    
+    if(interval[1] <= real_mean & interval[2] >= real_mean){
+      prob_N = prob_N + 1
+    }
+    
+    if(interval[3] <= real_mean & interval[4] >= real_mean) {
+      prob_U = prob_U + 1
+    }
+  }
+  
+  cat("Dlugosc przedzialu z NSE: ", mean(v_N), ", p-stwo pokrycia: ",
+      prob_N/1000, "\n")
+  cat("Dlugosc przedzialu z USE: ", mean(v_U), ", p-stwo pokrycia: ",
+      prob_U/1000)
+}
+@
+Dla prób z podpunktu \ref{sub:a} mamy następujące rezultaty.
+<<echo=FALSE>>=
+conf_interval_rep(n1=5, mi1 = 0, sd1 = 1, n2 = 10, mi2 = 20, sd2 = 10)
+@
+
+Dla prób z podpunktu \ref{sub:b}:
+<<echo=FALSE>>=
+conf_interval_rep(n1=5, mi1 = 0, sd1 = 1, n2 = 10, mi2 = 20, sd2 = 1)
+@
+
+Nastomiast dla prób z podpunktu \ref{sub:c}:
+<<echo=FALSE>>=
+conf_interval_rep(n1=10, mi1 = 0, sd1 = 1, n2 = 10, mi2 = 20, sd2 = 10)
+@
+Dla pierwszego przypadku możemy zaobserwować największą różnicę w prawdopodobieństwie pokrycia przedziału oraz w jego długości. Wynika to z tego, że próby różnią się od siebie najbardziej wśród wszystkich przykładów. Druga badana próba w podpunkcie \ref{sub:a} ma 10 razy większe odchylenie standardowe oraz jej wielkość jest dwa razy większa od pierwszej próby. Skutkuje to szerszym przedziałem, a co za tym idzie -- większym prawdopodobieństwem pokrycia średniej przez przedział. W podpunkcie \ref{sub:b}, różnice są już bardzo niewielkie, odchylenia standardowe dla obydwu prób są takie same, natomiast druga próba znów ma dwa razy więcej elementów, co skutkuje odrobinę większym prawdopodobieństwem pokrycia przedziału, chociaż różnica w długości jest mała. W ostatnim przykładzie, mamy próby o różnym odchyleniu standardowym, ale o tej samej liczności. W taki przypadku obydwie metody wyznaczania przedziałów ufności dają ten sam wynik.
+
+\subsection{Podsumowanie i wnioski}
+Sprawdziliśmy, że metoda wyznaczania przedziałów ufności przy wykorzystaniu nieuśrednionego i uśrednionego SE daje ten sam rezultat dla równolicznych prób, nawet jeśli mają one różne ochylenia standardowe.
+
+\section{Zadanie 2}
+\label{sec:zad2}
+Badamy zbiór danych z pliku \texttt{chol.txt} zawierający dane dotyczące poziomu cholesterolu pacjentów kilka dni po zawale. Celem zadania jest przetestowanie hipotezy mówiącej o tym, że poziom cholesterolu u osób z grupy kontrolnej (pacjenci nie będący po zawale) różni się od poziomu cholesterolu u pacjentów po zawale. Wykorzystamy test t-Studenta dla dwóch niezależnych prób. W R skorzystamy z funkcji \texttt{t.test()}, ale matematycznie test Studenta dla dwóch niezależnych prób opiera się na statystyce testowej:
+\begin{equation}
+t_s = \frac{\bar{y_1} - \bar{y_2}}{SE},
+\end{equation}
+gdzie $SE$ może być uśrednione lub nieuśrednione o wzorach takich jak w zadaniu \ref{sec:zad1}. Każdy test wykonujemy na pewnym poziomie istotności $\alpha$ (prawdopodobieństwo popełnienia błędu I-go rodzaju) i to właśnie przy pomocy poziomu istotności konstruujemy obszar krytyczny (obszar odrzuceń), który determinuje decyzje o odrzuceniu lub przyjęciu hipotezy zerowej $H_0$. Obszar krytyczny tworzony jest przy pomocy kwantyli rzędu $\alpha$ lub $\frac{\alpha}{2}$ (w zależności od tego, czy badamy alternatywę obustronną lub jednostronną) z rozkładu t-Studenta. Ważną badaną wielkością dotyczącą testów statystycznych jest też $p$--wartość, czyli graniczny poziom istotności, najmniejszy, przy którym zaobserwowana wartość statystyki testowej prowadzi do odrzucenia hipotezy zerowej \cite{item1}. Jeśli $p$--wartość jest mniejsza bądź równa poziomowi istotności $\alpha$, odrzucamy $H_0$ na rzecz $H_1$. W przeciwnym razie przyjmujemy hipotezę zerową. Zarówno statystyka testowa jak i $p$--wartość są obliczane przez funkcję \texttt{t.test()}.
+
+\subsection{Porównanie histogramów i wykresów kwantylowych}
+Test Studenta ma swoje założenia dotyczące badanych danych. Pierwszym z nich jest założenie dotyczące rozkładu, mówiące o tym, że rozkład wyników zmiennej zależnej w każdej z analizowanych grup ma być zbliżony do normalnego \cite{item2}. To założenie zbadamy w tym podpunkcie, na początku metodą graficzną wykorzystującą histogramy i wykresy kwantylowe, a następnie testem Shapiro--Wilka, będącym dobrym testem normalności dla małych prób. W zbiorze jest 28 obserwacji dla pacjentów po zawale i 30 dla osób z grupy kontrolnej.
+
+\subsubsection{Grupa kontrolna}
+Wyznaczamy histogram oraz wykres kwantylowy poziomu cholesterolu dla osób z grupy kontrolnej.
+
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide',fig.show='hold', error=FALSE, fig.align='center', out.width='49%', warning=FALSE>>=
+library(ggplot2)
+library(scales)
+library(car)
+
+chol1 <- read.table("chol.txt", skip = 5, nrows = 28, na.strings = ".") # pacjenci po zawale
+chol2 <- read.table("chol.txt", skip = 5 + 28) # grupa kontrolna
+chol2 <- data.frame(n = chol2$V1, chol = chol2$V8)
+ggplot(chol2, aes(chol)) +
+  geom_histogram(aes(y = stat(count)/sum(count)), bins = 13,
+                 fill="cornflowerblue",
+                 col="white") +
+  labs(title = "Histogram poziomu cholesterolu u osob z grupy kontrolnej", x="Poziom cholesterolu", y="Czestosc") +
+  xlim(110, 360)
+
+qqPlot(chol2$chol, main = "QQplot poziomu cholesterolu u osób z grupy kontrolnej", xlab = "Kwantyle teoretyczne", ylab="Kwantyle próbkowe", col.lines = "cornflowerblue")
+
+@
+Zarówno histogram jak i wykres kwantylowy pokazują, że rozkład nie jest normalny. Na wykresie kwantylowym możemy zauważyć obserwacje znajdujące się poza przedziałem ufności. Sprawdźmy zatem testem Shapiro--Wilka, czy z puntu widzenia statystyki jesteśmy w stanie przyjąć, że rozkład poziomu cholesterolu u osób z grupy kontrolnej jest w przybliżeniu normalny. W tym celu używamy funkcji \texttt{shapiro.test()}. Przyjmujemy poziom istotności $\alpha = 0.05$.
+<<echo=FALSE>>=
+shapiro.test(chol2$chol)
+@
+Interpretacja $p$--wartości dla testu Shapiro--Wilka mówi o tym, że jeśli jest ona większa od poziomu istotności $\alpha$, to możemy przyjąć, że dane w przybliżeniu pochodzą z rozkładu normalnego. W naszym przypadku $p$--wartość $\approx 0.09 > 0.05$, stąd przyjmujemy, że rozkład poziomu cholesterolu dla osób z grupy kontrolnej jest w przybliżeniu normalny.
+
+\subsubsection{Pacjenci po zawale}
+Badamy dane dotyczące poziomu cholesterolu u pacjentów 2, 4 i 14 dni po zawale. 
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide',fig.show='hold', error=FALSE, fig.align='center', out.width='49%', warning=FALSE>>=
+library(ggplot2)
+library(scales)
+library(car)
+library(RColorBrewer)
+
+chol1 <- read.table("chol.txt", skip = 5, nrows = 28, na.strings = ".") # pacjenci po zawale
+
+ggplot(chol1, aes(V8)) +
+  geom_histogram(aes(y = stat(count)/sum(count)), bins = 13,
+                 fill="#D73027",
+                 col="white") +
+  labs(title = "Histogram poziomu cholesterolu u pacjentow 2 dni po zawale", x="Poziom cholesterolu", y="Czestosc")+
+  xlim(110, 360)
+
+qqPlot(chol1$V8, main = "QQplot poziomu cholesterolu u pacjentów 2 dni po zawale", xlab = "Kwantyle teoretyczne", ylab="Kwantyle próbkowe", col.lines = "#D73027")
+
+ggplot(chol1, aes(V13)) +
+  geom_histogram(aes(y = stat(count)/sum(count)), bins = 13,
+                 fill="#F46D43",
+                 col="white") +
+  labs(title = "Histogram poziom cholesterolu u pacjentow 4 dni po zawale", x="Poziom cholesterolu", y="Czestosc")+
+  xlim(110, 360)
+
+qqPlot(chol1$V13, main = "QQplot poziomu cholesterolu u pacjentów 4 dni po zawale", xlab = "Kwantyle teoretyczne", ylab="Kwantyle próbkowe", col.lines = "#F46D43")
+
+ggplot(chol1, aes(V18)) +
+  geom_histogram(aes(y = stat(count)/sum(count)), bins = 10,
+                 fill="#FDAE61",
+                 col="white") +
+  labs(title = "Histogram poziom cholesterolu u pacjentow 14 dni po zawale", x="Poziom cholesterolu", y="Czestosc")+
+  xlim(110, 360)
+
+qqPlot(chol1$V18, main = "QQplot poziomu cholesterolu u pacjentów 14 dni po zawale", xlab = "Kwantyle teoretyczne", ylab="Kwantyle próbkowe", col.lines = "#FDAE61")
+
+@
+W przypadku pacjentów po zawale możemy zauważyć, że jedynie dla pacjentów 4 dni po zawale jedna obserwacja znajduje się poza przedziałem ufności na wykresie kwantylowym. Jeśli chodzi o same pomiary poziomu cholesterolu, możemy zauważyć, że najwyższy bin ,,przesuwa" się od poziomu pomiędzy 200 a 300 do poziomu około 200 wraz z mijającym czasem. Zgodnie z \cite{item3} prawidłowy poziom cholesterolu we krwi wg. WHO powinien wynosić 180 mg/dl. Możemy zauważyć, że bin zawierający taką wartość faktycznie jest najwyższy na histogramie dla grupy kontrolnej. 14 dni po zawale zbliżamy się do tej wartości. Najgorsze wskazania poziomu cholesterolu są u pacjentów 2 dni po zawale-- dochodzą do wartości nawet przekraczających 300 mg/dl.
+
+Ponieważ w późniejszej części zadania będziemy wykonywać test Studenta dla osób zdrowych i pacjentów dwa dni po zawale, to sprawdzimy także normalność tej drugiej grupy używając testu Shapiro--Wilka na poziomie istotności $\alpha = 0.05$.
+<<echo=FALSE>>=
+shapiro.test(chol1$V8)
+@
+$P$--wartość jest większa od $\alpha$, zatem przyjmujemy, że wartości poziomu cholesterolu dla pacjentów 2 dni po zawale mają w przybliżeniu rozkład normalny.
+
+\subsection{Wykresy pudełkowe}
+Drugim założeniem testu Studenta jest homogeniczność wariancji, czyli założenie, że wariancje w porównywanych grupach są do siebie podobne. W tym celu skonstruujemy wykresy pudełkowe (ang. \textit{boxplot}) dla grupy kontrolenej i pacjentów dwa dni po zawale. Wykresy pudełkowe służą do ocenienia wartości typowych i nietypowych dla badanych danych. Z wykresu możemy odczytać 5 wartości : minimalną wartość typową, pierwszy kwartyl, medianę, trzeci kwartyl oraz maksymalną watość typową. Na wykresie pudełkowym również możemy zaznaczyć wartości odstające. Otrzymując od diagramu te informacje możemy wyciągnąć wnioski dotyczące, między innymi, rozrzutu danych, oceniając wysokość ,,pudełka" na wykresie, która wyznacza rozstęp miedzykwartylowy (IQR).
+
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide',fig.show='hold', error=FALSE, fig.align='center', out.width='49%', warning=FALSE>>=
+ggplot(chol2, aes(y=chol)) +
+  geom_boxplot(color="cornflowerblue") +
+  labs(title = "Wykres pudełkowy dla poziomu cholesterolu osób z grupy kontrolnej", y="Poziom cholesterolu") +
+  ylim(140, 360)
+
+ggplot(chol1, aes(y=V8)) +
+  geom_boxplot(color="#D73027") +
+  labs(title = "Wykres pudełkowy dla poziomu cholesterolu osób 2 dni po zawale", y="Poziom cholesterolu") +
+  ylim(140, 360)
+@
+Odpowiednie dopasowanie osi Y pokazuje, że rozrzut danych w próbach jest różny. IQR dla danych dotyczących poziomu cholesterolu u pacjentów 2 dni po zawale jest ponad dwa razy większy niż dla grupy kontrolnej, co również pokazują wyliczenia mówiące, że $IQR_{kontrolna} = 24$, natomiast $IQR_{2-dni} = 56.5$. Stąd, test który tak naprawdę jest przeprowadzony to nie test t-Studenta, a \textbf{test t-Welcha}, będący uogólnieniem testu t-Studenta na populacje o różnych wariancjach \cite{item4}.
+
+\subsection{Testowanie hipotez}
+Zanim przejdziemy do testowania należałoby omówić jeszcze kilka założeń dla (już teraz) testu t-Welcha. Poza założeniem dotyczącego homogeniczności wariancji, pozostałe założenia pozostają takie jak w przypadku testu t-Studenta. Zgodnie z \cite{item5} założeniem jest to, że dane są ciągłe (zgadza się, pomiary poziomu cholesterolu są ciągłe) oraz, że próby są niezależne i losowe. Miejmy nadzieję, że ten kto przeprowadził badanie dotyczące cholesterolu zadbał o to, aby w grupie kontrolnej faktycznie znalazły się osoby zdrowe, a w grupie osób 2 dni po zawale inne osoby, które rzeczywiście przeszły tę chorobę. To samo dotyczy losowości. 
+
+Mając sprawdzone założenia, przechodzimy do przetestowania hipotezy $H_0$ mówiącej o tym, że średni poziom cholesterolu u osób dwa dni po zawale jest  taki sam jak u osób zdrowych, przeciwko hipotezie alternatywnej $H_1$ stanowiącej, że średni poziom cholesterolu jest różny. Oznaczmy jako $\mu_1$ średni poziom cholesterolu u osób z grupy kontrolnej, a jako $\mu_2$ średni poziom cholesterolu u osób 2 dni po zawale. Na poziomie istotności $\alpha = 0.05$ mamy:
+\begin{equation}
+\begin{aligned}
+H_0: \mu_1 = \mu_2 \\
+H_1: \mu_1 \neq \mu_2.
+\end{aligned}
+\end{equation}
+Przeprowadzamy test t-Welcha.
+<<echo = FALSE>>=
+chol1 <- data.frame(chol2days = chol1$V8)
+t.test(chol2$chol, chol1$chol2days)
+@
+Bardzo mała $p$--wartość (mniejsza od $\alpha$) daje nam podstawę do odrzucenia hipotezy zerowej na rzecz hipotezy alternatywnej. Możemy stwierdzić, że na poziomie istotności $\alpha = 0.05$ faktycznie średni poziom cholesterolu dla grupy kontrolnej jest inny niż dla osób 2 dni po zawale.
+
+Zadajmy w takim razie inne pytanie: czy średni poziom cholesterolu u osób 2 dni po zawale jest \textbf{wyższy} niż u osób zdrowych. Mamy wtedy następujące hipotezy na poziomie istotności $\alpha$:
+\begin{equation}
+\begin{aligned}
+H_0: \mu_1 \geq \mu_2 \\
+H_1: \mu_1 < \mu_2.
+\end{aligned}
+\end{equation}
+Przeprowadzamy test.
+<<echo = FALSE>>=
+t.test(chol2$chol, chol1$chol2days, alternative = "less", var.equal = F)
+@
+Znów, $p$--wartość jest znacząco mniejsza od poziomu istotności $\alpha$, zatem możemy powiedzieć, że na poziomie istotności $0.05$ badanie potwierdza, że średni poziom cholesterolu jest wyższy u osób 2 dni po zawale niż u osób zdrowych.
+
+\subsection{Podsumowanie i wnioski}
+Zadanie przeprowadziło nas przez proces testowania hipotez dla dwóch niezależnych prób testem t-Welcha zaczynając od sprawdzenia założeń testu metodami graficznymi i testem Shapiro--Wilka, a kończąc na wykonaniu samego testu i podjęciu decyzji o przyjęciu lub odrzuceniu hipotezy zerowej. 
+
+
+\section{Zadanie 3}
+W zadaniu wracamy do zbioru danych \texttt{income.txt} zawierającego wyniki ankiet przeprowadzonych przez Bureau of Labor Statistics w USA na próbie 55~899 osób. Dla każdej osoby mamy podane:
+\begin{itemize}
+\item wiek (w latach),
+\item wykształcenie (1 -- podstawowe, 2 -- niepełne średnie, 3 -- średnie, 4 -- niepełne wyższe, 5 -- wyższe (licencjat), 6 -- wyższe (magisterium)),
+\item płeć (1--mężczyzna, 2--kobieta),
+\item roczne zarobki (w dolarach),
+\item sektor zatrudnienia (5 -- sektor prywatny, 6 -- sektor publiczny, 7 -- samozatrudnienie).
+\end{itemize}
+
+\subsection{Wykresy kwantylowe zarobków dla kobiet i mężczyzn}
+Ponieważ celem jest, podobnie jak w zadaniu \ref{sec:zad2}, przeprowadzenie testu t-Studenta, musimy sprawdzić założenia dotyczące badanych danych. Zaczynamy od sprawdzenia normalności dla danych dotyczących zarobków dla kobiet i mężczyzn. Wykonamy to przy pomocy wykresu kwantylowego.
+
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide',fig.show='hold', error=FALSE, fig.align='center', out.width='49%', warning=FALSE>>=
+income <- read.table("income.txt")
+colnames(income) <- c("nr", "wiek", "wykszt", "plec", "zarobki", "sektor")
+#---- podpunkt a
+# 1 -- mezczyzna 2--- kobieta
+women <- subset(income, plec == 2)
+men <- subset(income, plec == 1)
+
+qqPlot(women$zarobki, main="Wykres kwantylowy zarobków kobiet", xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", col.lines = "#D73027")
+qqPlot(men$zarobki, main = "Wykres kwantylowy dla zarobków mężczyzn", xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", col.lines = "cornflowerblue")
+@
+Możemy zauważyć, że bardzo duża część danych nie zawiera się w przedziale ufności wyznaczonym przez funkcję \texttt{qqPlot()}. Spróbujemy przekształcić dane tak, aby były trochę bardziej podobne do rozkładu normalnego.
+
+\subsection{Przekształcenie $Y = D^{0.25}$}
+Tworzymy nową zmienną $Y = D^{0.25}$, gdzie $D$ oznacza dochód i konstruujemy dla niej wykresy kwantylowe, sprawdzając, czy rozkład zarobków dla kobiet i mężczyzn przypomina rozkład normalny.
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide',fig.show='hold', error=FALSE, fig.align='center', out.width='49%', warning=FALSE>>=
+library(dplyr)
+women <- women %>%
+  mutate(Y = zarobki^(0.25))
+men <- men %>%
+  mutate(Y = zarobki^(0.25))
+
+qqPlot(women$Y, main="Wykres kwantylowy zmiennej Y dla kobiet", xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", col.lines = "#D73027")
+qqPlot(men$Y, main="Wykres kwantylowy zmiennej Y dla mężczyzn", xlab = "Kwantyle teoretyczne", ylab = "Kwantyle próbkowe", col.lines = "cornflowerblue")
+@
+Możemy zauważyć, że faktycznie, większa część wartości zmiennej $Y$ zawiera się w przedziale ufności niż w przypadku zmiennej nieprzekształconej. Ponieważ próba jest bardzo duża, nie sprawdzimy dla niej normalności testem Shapiro--Wilka. Moglibyśmy wykonać to przy pomocy, na przykład, testu Lilliefors. Jednakże dzięki liczności próby skorzystamy z Centralnego Twierdzenia Granicznego i przeprowadzimy test t-Studenta uznając, że dane w przybliżeniu pochodzą z rozkładu normalnego.
+
+\subsection{Test Studenta}
+Badane dane są ciągłe i losowe, w przybliżeniu normalne, zatem sprawdzimy jeszcze homogeniczność wariancji. Aplikując funkcję \texttt{t.test()} możemy zobaczyć, czy został wykonany test Welcha czy Studenta, jednakże możemy również sprawdzić równość wariancji używając F-testu (mamy 2 próby) przyjmującego $H_0$ mówiącą o tym, że wariancje w obydwu próbach są równe. Wykonamy F-test na poziomie istotności $\alpha = 0.05$:
+<<echo = FALSE>>=
+var.test(women$Y, men$Y)
+@
+$P$--wartość jest znacząco mniejsza od poziomu istotności, jednakże zgodnie z \cite{item6} F-test jest bardzo wrażliwy na zaburzenia normalności danych. Przyjmiemy, że wariancje na poziomie istotności 0.05 nie są równe. 
+
+Przeprowadzimy test Studenta (Welcha) na poziomiomie istotności $\alpah = 0.05$, sprawdzający, czy średnia wielkość zmiennej $Y$ jest istotnie większa u mężczyzn niż u kobiet. Niech $\mu_1$ oznacza średnią wielkość zmiennej $Y$ u mężczyzn, a $\mu_2$ średnią wielkość zmiennej $Y$ u kobiet. Mamy:
+\begin{equation}
+\begin{aligned}
+H_0: \mu_1 \geq \mu_2 \\
+H_1: \mu_1 < \mu_2.
+\end{aligned}
+\end{equation}
+Wykonujemy test:
+<<echo = FALSE>>=
+t.test(women$Y, men$Y, alternative = "less")
+@
+$P$--wartość jest znacząco mniejsza od poziomu ufności, zatem odrzucamy hipotezę zerową na rzecz hipotezy alternatywnej. Możemy powiedzieć, że na poziomie ufności 0.05 wartość zmiennej $Y$ dla mężczyzn jest znacząco większa niż dla kobiet.
+
+\subsection{Wykres pudełkowy zmiennej $Y$ dla różnych poziomów wykształcenia}
+Konstruujemy wykres pudełkowy zmiennej $Y$ dla sześciu poziomów wykształcenia zawartych w danych.
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide',fig.show='hold', error=FALSE, fig.align='center', out.width='60%', warning=FALSE>>=
+income <- income %>%
+  mutate(Y = zarobki^(0.25)) %>%
+  mutate(wykszt2 = as.factor(wykszt))
+
+ggplot(income, aes(x=wykszt2, y=Y, color=wykszt2)) +
+  geom_boxplot() +
+  scale_color_brewer(palette = "Set2") +
+  labs(title="Wykres pudełkowy zmiennej Y dla poziomów wykształcenia", x = "Wykształcenie") +
+  theme(legend.position = "none")
+@
+Mediana wyznaczona przez poziomy odcinek w każdym z pudełek jest wyższa wraz ze wzrostem wykształcenia. IQR jest dość podobne, aczkolwiek najmniejsza wysokość wykresu pudełkowego jest dla wykształcenia podstawowego. Może być to związane z najmniejszą licznością grupy osób posiadających wykształcenie podstawowe.
+
+\subsection{Test Studenta}
+Przeprowadzamy test do sprawdzenia, czy średnia wielkość zmiennej $Y$ u osób z magisterium jest istotnie większa niż u osób z licencjatem. IQR jest bardzo podobne dla obydwu grup. Mamy 10~991 zmiennych dla osób z licencjatem oraz 5601 dla osób z magisterium, zatem na mocy Centralnego Twierdzenia Granicznego przyjmiemy, że założenie o normalności danych jest spełnione. Niech $\mu_1$ oznacza średnią wartość Y dla osób z licencjatem, a $\mu_2$ średnią wartość Y dla osób z magisterium. Na poziomie ufności $\alpha = 0.05$ tetsujemy:
+\begin{equation}
+\begin{aligned}
+H_0: \mu_1 \geq \mu_2 \\
+H_1: \mu_1 < \mu_2.
+\end{aligned}
+\end{equation}
+<<echo = FALSE>>=
+lic <- subset(income, wykszt == 5)
+mgr <- subset(income, wykszt == 6)
+t.test(lic$Y, mgr$Y, alternative = "less")
+@
+$P$--wartość jest znacząco mniejsza od poziomu istotności, zatem mamy podstawy do odrzucenia $H_0$ na rzecz $H_1$. Na poziomie istotności 0.05 możemy stwierdzić, że osoby z magisterium statystycznie zarabiają więcej od osób z licencjatem.
+
+\subsection{Wykres pudełkowy zmiennej $Y$ dla różnych sektorów zatrudnienia}
+Konstruujemy wykres pudełkowy dla porównania wartości zmiennej $Y$ w trzech różnych sektorach zatrudnienia.
+<<echo = FALSE, fig=TRUE, message=FALSE, results='hide',fig.show='hold', error=FALSE, fig.align='center', out.width='60%', warning=FALSE>>=
+income <- income %>%
+  mutate(sektor2 = as.factor(sektor))
+
+ggplot(income, aes(x=sektor2, y=Y, color=sektor2)) +
+  geom_boxplot() +
+  scale_color_brewer(palette = "Set2") +
+  labs(title="Wykres pudełkowy zmiennej Y dla sektorów zatrudnienia", x = "Sektor zatrudnienia") +
+  theme(legend.position = "none")
+@
+Na wykresie widzimy diagramy pudełkowe dla sektora publicznego (5), prywatnego (6) i samozatrudnienia (7). Najwyższa mediana jak i najmniejsze IQR zachodzi dla sektora prywatnego. Sektor publiczny ma trochę większe IQR i odrobinę niższą medianę, natomiast sektor samozatrudnienia ma zdecydowanie największe IQR i medianę podobną do sektora publicznego.
+
+\subsection{Test Studenta}
+Zastosujemy test Studenta do udzielenia odpowiedzi na pytanie czy istnieje różnica między średnią wartością zmiennej Y dla osób zatrudnionych w sektorze publicznym i prywatnym. Niech $\mu_1$ oznacza średnią wartość Y w sektorze publicznym, a $\mu_2$ średnią wartość Y dla sektora prywatnego. Na poziomie istotności $\alpha = 0.5$ mamy:
+\begin{equation}
+\begin{aligned}
+H_0: \mu_1 = \mu_2 \\
+H_1: \mu_1 \neq \mu_2.
+\end{aligned}
+\end{equation}
+Wykonujemy test.
+<<echo = FALSE>>=
+public <- subset(income, sektor == 5)
+private <- subset(income, sektor == 6)
+t.test(public$Y, private$Y, alternative = "less")
+@
+Wykonany test jest konkretniej testem Welcha. $P$--wartość jest znacząco mniejsza od poziomu istotności, zatem mamy podstawy, aby odrzucić hipotezę zerową na rzecz alternatywnej i stwierdzić (na poziomie istotności $\alpha = 0.05$), że istnieje różnica między średnią wartością zmiennej Y dla osób zatrudnionych w sektorze publicznym i prywatnym.
+
+\subsection{Podsumowanie i wnioski}
+W zadaniu przeprowadziliśmy transformację zmiennej ilościowej, która pozwoliła nam na wykonanie różnych testów Studenta (i Welcha) dla danych dotyczących zarobków. Mogliśmy statystycznie ,,potwierdzić" przypuszczenia z poprzednich raportów, dotyczące przykładowo, Gender Pay Gap i różnicy w zarobkach zależnej od wykształcenia.
+
+\begin{thebibliography}{9}
+\bibitem{item1}
+\href{https://pogotowiestatystyczne.pl/istotnosc-statystyczna/}{P-wartość.}
+
+\bibitem{item2}
+\href{https://www.naukowiec.org/wiedza/statystyka/zalozenia-testow-t-studenta_776.html}{Założenia testu t-Studenta.}
+
+\bibitem{item3}
+\href{https://zdrowiezwyboru.pl/choroby-a-dieta/uklad-krazenia/202-lipidogram-najnowsze-normy/?gclid=Cj0KCQjwoPL2BRDxARIsAEMm9y9tS906xyrx-Hi-V5PTcQEb6Cvx9MZfaBvuwxjkY5YXyLnaDso6r6caApuvEALw_wcB}{Markery ryzyka zawałowego.}
+
+\bibitem{item4}
+\href{https://en.wikipedia.org/wiki/Welch\%27s_t-test}{Test t-Welcha.}
+
+\bibitem{item5}
+\href{https://ncss-wpengine.netdna-ssl.com/wp-content/themes/ncss/pdf/Procedures/NCSS/Two-Sample_T-Test.pdf}{Dokument z NCSS Statistical Software z założeniami dotyczącymi testu t-Studenta.}
+
+\bibitem{item6}
+\href{http://www.sthda.com/english/wiki/f-test-compare-two-variances-in-r}{F-test w R.}
+
+\end{thebibliography}
+
+\end{document}
